@@ -27,8 +27,7 @@ func NewService(clientID, clientSecret, callback string) *Service {
 }
 
 const (
-	STATE_COOKIE    = "oauth_state"
-	VERIFIER_COOKIE = "oauth_verifier"
+	STATE_COOKIE = "oauth_state"
 )
 
 // PreAuth is the landing page that the user arrives at when they first attempt
@@ -53,17 +52,7 @@ func (s *Service) PreAuth(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	}
 
-	verifierCookie := &http.Cookie{
-		Name:     VERIFIER_COOKIE,
-		Value:    verifier,
-		MaxAge:   10 * 60, // 10 minutes in seconds
-		Secure:   true,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	}
-
 	http.SetCookie(w, stateCookie)
-	http.SetCookie(w, verifierCookie)
 	w.Header().Set("location", url)
 	w.WriteHeader(http.StatusFound)
 }
@@ -83,13 +72,6 @@ func (s *Service) PostAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	verifierCookie, err := r.Cookie(VERIFIER_COOKIE)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("verifier cookie not found"))
-		return
-	}
-
 	// Important:  Compare the state!  This prevents CSRF attacks
 	if state != stateCookie.Value {
 		w.WriteHeader(http.StatusBadRequest)
@@ -97,7 +79,7 @@ func (s *Service) PostAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = s.conf.Exchange(r.Context(), code, oauth2.VerifierOption(verifierCookie.Value))
+	_, err = s.conf.Exchange(r.Context(), code)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("error exchange code for token: %v", err)))
