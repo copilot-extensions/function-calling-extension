@@ -6,9 +6,17 @@ import (
 )
 
 type Info struct {
-	Port         string
-	FQDN         string
-	ClientID     string
+	// Port is the local port on which the application will run
+	Port string
+
+	// FQDN (for Fully-Qualified Domain Name) is the internet facing host address
+	// where application will live (e.g. https://example.com)
+	FQDN string
+
+	// ClientID comes from your configured GitHub app
+	ClientID string
+
+	// ClientSecret comes from your configured GitHub app
 	ClientSecret string
 }
 

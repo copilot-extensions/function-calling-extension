@@ -53,6 +53,9 @@ func run() error {
 	return http.ListenAndServe(":"+config.Port, nil)
 }
 
+// fetchPublicKey fetches the keys used to sign messages from copilot.  Checking
+// the signature with one of these keys verifies that the request to the
+// completions API comes from GitHub and not elsewhere on the internet.
 func fetchPublicKey() (*ecdsa.PublicKey, error) {
 	resp, err := http.Get("https://api.github.com/meta/public_keys/copilot_api")
 	if err != nil {

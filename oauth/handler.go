@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// Service provides endpoints to allow this agent to be authorized.
 type Service struct {
 	conf *oauth2.Config
 }

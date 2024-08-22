@@ -17,6 +17,7 @@ import (
 	"github.com/wk8/go-ordered-map/v2"
 )
 
+// Service provides and endpoint for this agent to perform chat completions
 type Service struct {
 	pubKey *ecdsa.PublicKey
 }
@@ -37,6 +38,8 @@ func (s *Service) ChatCompletion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Make sure the payload matches the signature. In this way, you can be sure
+	// that an incoming request comes from github
 	isValid, err := validPayload(body, sig, s.pubKey)
 	if err != nil {
 		fmt.Printf("failed to validate payload signature: %v\n", err)
@@ -64,6 +67,7 @@ func (s *Service) ChatCompletion(w http.ResponseWriter, r *http.Request) {
 }
 
 func generateCompletion(ctx context.Context, integrationID, apiToken string, req *chatRequest, w *sseWriter) error {
+	// If the user clicks a confirmation box, handle that, and ignore everything else.
 	for _, conf := range req.Messages[len(req.Messages)-1].Confirmations {
 		if conf.State != "accepted" {
 			continue
@@ -93,7 +97,12 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 	var confs []confirmationData
 	messages = append(messages, req.Messages...)
 
+	// The LLM will call functions when it wants more information.  We loop here in
+	// order to feed that information back into the LLM
 	for i := 0; i < 5; i++ {
+
+		// Only give the LLM tools if we're not on the last loop.  On the final
+		// iteration, we want to force a chat completion out of the LLM
 		var tools []functionTool
 		if i < 4 {
 			listProperties := orderedmap.New[string, *jsonschema.Schema]()
@@ -151,6 +160,7 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 				},
 			}
 		}
+
 		chatReq := &copilotChatCompletionsRequest{
 			Model:    modelGPT35,
 			Messages: messages,
@@ -163,6 +173,8 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 		}
 
 		function := getFunctionCall(res)
+
+		// If there's no function call, send the completion back to the client
 		if function == nil {
 			choices := make([]sseResponseChoice, len(res.Choices))
 			for i, choice := range res.Choices {
@@ -181,6 +193,7 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 			w.writeDone()
 			break
 		}
+
 		fmt.Println("found function!", function.Name)
 
 		switch function.Name {

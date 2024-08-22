@@ -5,6 +5,8 @@ import (
 	"io"
 )
 
+// Copilot extensions must stream back chat responses. sseWriter wraps an
+// io.Writer to help write sse formated data.
 type sseWriter struct {
 	w io.Writer
 }
