@@ -18,7 +18,7 @@ This project is a Go application that demonstrates how to use function calling i
 ```
 export PORT=8080
 export CLIENT_ID=Iv1.0ae52273ad3193eb // the application id
-export CLIENT_SECRET="your_client_secret" // generate a client secret for your application
+export CLIENT_SECRET="your_client_secret" // generate a new client secret for your application
 export FQDN=https://6de513480979.ngrok.app // use ngrok to expose a url
 ```
 
@@ -54,13 +54,26 @@ go run .
 ## Accessing the Agent in Chat:
 
 1. In the `Copilot` tab of your Application settings (`https://github.com/settings/apps/<app_name>/agent`)
-- Set the URL that was set for your FQDN above with the endpoint `/agent` (ie `https://6de513480979.ngrok.app/agent`)
-- Set the Pre-Authorization URL with the endpoint `/auth/authorization` (ie `https://6de513480979.ngrok.app/auth/authorization`)
+- Set the URL that was set for your FQDN above with the endpoint `/agent` (e.g. `https://6de513480979.ngrok.app/agent`)
+- Set the Pre-Authorization URL with the endpoint `/auth/authorization` (e.g. `https://6de513480979.ngrok.app/auth/authorization`)
 2. In the `General` tab of your application settings (`https://github.com/settings/apps/<app_name>`)
-- Set the `Callback URL` with the `/auth/callback` endpoint (ie `https://8053-4-78-240-29.ngrok-free.app/auth/callback`)
-3. Ensure your permissions are enabled in `Permissions & events` > `Account Permissions` > `Copilot Chat` > `Read Only`.
-4. Now if you go to `https://github.com/copilot` you can `@` your agent using the name of your application.
+- Set the `Callback URL` with the `/auth/callback` endpoint (e.g. `https://6de513480979.ngrok.app/auth/callback`)
+- Set the `Homepage URL` with the base ngrok endpoint (e.g. `https://6de513480979.ngrok.app/auth/callback`)
+3. Ensure your permissions are enabled in `Permissions & events` > 
+- `Repository Permissions` > `Issues` > `Access: Read and Write`
+- `Account Permissions` > `Copilot Chat` > `Access: Read Only`
+4. Ensure you install your application at (`https://github.com/apps/<app_name>`)
+5. Now if you go to `https://github.com/copilot` you can `@` your agent using the name of your application.
 
 ## What Can It Do
 
-1. TODO sample commands
+Test out thhe agent with the following commands!
+
+> Ensure the app is 
+1. `List issues on repo foo/bar`
+2. `Create an issue on repo foo/bar with title "some titie" and body "some body"`
+
+| Description | Prompt |
+| --- |--- |
+| User asking `@agent` to create a GitHub issue | `@agent Create an issue in the repo (org/repo) with title "my first issue" and body "hooray I created an issue"` |
+| User asking `@agent` to list GitHub issues | `@agent list all issues in this repo (org/repo)` |
