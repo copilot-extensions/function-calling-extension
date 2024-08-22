@@ -67,11 +67,7 @@ go run .
 
 ## What Can It Do
 
-Test out thhe agent with the following commands!
-
-> Ensure the app is 
-1. `List issues on repo foo/bar`
-2. `Create an issue on repo foo/bar with title "some titie" and body "some body"`
+Test out the agent with the following commands!
 
 | Description | Prompt |
 | --- |--- |
