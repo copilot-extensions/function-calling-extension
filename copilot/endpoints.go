@@ -1,4 +1,4 @@
-package agent
+package copilot
 
 import (
 	"bytes"
@@ -7,44 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/invopop/jsonschema"
 )
 
-type model string
-
-const (
-	modelGPT35 model = "gpt-3.5-turbo"
-	modelGPT4  model = "gpt-4"
-)
-
-type copilotChatCompletionsRequest struct {
-	Messages []chatMessage  `json:"messages"`
-	Model    model          `json:"model"`
-	Tools    []functionTool `json:"tools"`
-}
-
-type functionTool struct {
-	Type     string   `json:"type"`
-	Function function `json:"function"`
-}
-
-type function struct {
-	Name        string             `json:"name"`
-	Description string             `json:"description,omitempty"`
-	Parameters  *jsonschema.Schema `json:"parameters"`
-}
-
-type copilotChatCompletionsResponse struct {
-	Choices []chatChoice `json:"choices"`
-}
-
-type chatChoice struct {
-	Index   int         `json:"index"`
-	Message chatMessage `json:"message"`
-}
-
-func copilotChatCompletions(ctx context.Context, integrationID, apiKey string, req *copilotChatCompletionsRequest) (*copilotChatCompletionsResponse, error) {
+func ChatCompletions(ctx context.Context, integrationID, apiKey string, req *ChatCompletionsRequest) (*ChatCompletionsResponse, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -73,7 +38,7 @@ func copilotChatCompletions(ctx context.Context, integrationID, apiKey string, r
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var chatRes *copilotChatCompletionsResponse
+	var chatRes *ChatCompletionsResponse
 	err = json.NewDecoder(resp.Body).Decode(&chatRes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)

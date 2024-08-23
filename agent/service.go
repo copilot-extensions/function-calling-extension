@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/copilot-extensions/function-calling-extension/copilot"
 	"github.com/google/go-github/v57/github"
 	"github.com/invopop/jsonschema"
 	"github.com/wk8/go-ordered-map/v2"
@@ -54,7 +55,7 @@ func (s *Service) ChatCompletion(w http.ResponseWriter, r *http.Request) {
 	apiToken := r.Header.Get("X-GitHub-Token")
 	integrationID := r.Header.Get("Copilot-Integration-Id")
 
-	var req *chatRequest
+	var req *copilot.ChatRequest
 	if err := json.Unmarshal(body, &req); err != nil {
 		fmt.Printf("failed to unmarshal request: %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -66,7 +67,7 @@ func (s *Service) ChatCompletion(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func generateCompletion(ctx context.Context, integrationID, apiToken string, req *chatRequest, w *sseWriter) error {
+func generateCompletion(ctx context.Context, integrationID, apiToken string, req *copilot.ChatRequest, w *sseWriter) error {
 	// If the user clicks a confirmation box, handle that, and ignore everything else.
 	for _, conf := range req.Messages[len(req.Messages)-1].Confirmations {
 		if conf.State != "accepted" {
@@ -93,8 +94,8 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 		return nil
 	}
 
-	var messages []chatMessage
-	var confs []confirmationData
+	var messages []copilot.ChatMessage
+	var confs []copilot.ConfirmationData
 	messages = append(messages, req.Messages...)
 
 	// The LLM will call functions when it wants more information.  We loop here in
@@ -103,7 +104,7 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 
 		// Only give the LLM tools if we're not on the last loop.  On the final
 		// iteration, we want to force a chat completion out of the LLM
-		var tools []functionTool
+		var tools []copilot.FunctionTool
 		if i < 4 {
 			listProperties := orderedmap.New[string, *jsonschema.Schema]()
 			listProperties.Set("repository_owner", &jsonschema.Schema{
@@ -133,10 +134,10 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 				Description: "The content of the issue being created",
 			})
 
-			tools = []functionTool{
+			tools = []copilot.FunctionTool{
 				{
 					Type: "function",
-					Function: function{
+					Function: copilot.Function{
 						Name:        "list_issues",
 						Description: "Fetch a list of issues from github.com for a given repository.  Users may specify the repository owner and the repository name separately, or they may specify it in the form {repository_owner}/{repository_name}, or in the form github.com/{repository_owner}/{repository_name}.",
 						Parameters: &jsonschema.Schema{
@@ -148,7 +149,7 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 				},
 				{
 					Type: "function",
-					Function: function{
+					Function: copilot.Function{
 						Name:        "create_issue_dialog",
 						Description: "Creates a confirmation dialog in which the user can interact with in order to create an issue on a github.com repository.  Only one dialog should be created for each issue/repository combination.  Users may specify the repository owner and the repository name separately, or they may specify it in the form {repository_owner}/{repository_name}, or in the form github.com/{repository_owner}/{repository_name}.",
 						Parameters: &jsonschema.Schema{
@@ -161,13 +162,13 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 			}
 		}
 
-		chatReq := &copilotChatCompletionsRequest{
-			Model:    modelGPT35,
+		chatReq := &copilot.ChatCompletionsRequest{
+			Model:    copilot.ModelGPT35,
 			Messages: messages,
 			Tools:    tools,
 		}
 
-		res, err := copilotChatCompletions(ctx, integrationID, apiToken, chatReq)
+		res, err := copilot.ChatCompletions(ctx, integrationID, apiToken, chatReq)
 		if err != nil {
 			return fmt.Errorf("failed to get chat completions stream: %w", err)
 		}
@@ -254,7 +255,7 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 	return nil
 }
 
-func listIssues(ctx context.Context, apiToken, owner, repo string) (*chatMessage, error) {
+func listIssues(ctx context.Context, apiToken, owner, repo string) (*copilot.ChatMessage, error) {
 	client := github.NewClient(nil).WithAuthToken(apiToken)
 	issues, _, err := client.Issues.ListByRepo(ctx, owner, repo, nil)
 	if err != nil {
@@ -266,24 +267,24 @@ func listIssues(ctx context.Context, apiToken, owner, repo string) (*chatMessage
 		return nil, fmt.Errorf("error serializing issues")
 	}
 
-	return &chatMessage{
+	return &copilot.ChatMessage{
 		Role:    "system",
 		Content: fmt.Sprintf("The issues for the repository %s/%s are: %s", owner, repo, string(serializedIssues)),
 	}, nil
 }
 
-func createIssueConfirmation(owner, repo, title, body string) (*responseConfirmation, *chatMessage) {
-	return &responseConfirmation{
+func createIssueConfirmation(owner, repo, title, body string) (*copilot.ResponseConfirmation, *copilot.ChatMessage) {
+	return &copilot.ResponseConfirmation{
 			Type:    "action",
 			Title:   "Create Issue",
 			Message: fmt.Sprintf("Are you sure you want to create an issue in repository %s/%s with the title \"%s\" and the content \"%s\"", owner, repo, title, body),
-			Confirmation: &confirmationData{
+			Confirmation: &copilot.ConfirmationData{
 				Owner: owner,
 				Repo:  repo,
 				Title: title,
 				Body:  body,
 			},
-		}, &chatMessage{
+		}, &copilot.ChatMessage{
 			Role:    "system",
 			Content: fmt.Sprintf("Issue dialog created: {\"issue_title\": \"%s\", \"issue_body\": \"%s\", \"repository_owner\": \"%s\", \"repository_name\": \"%s\"}", title, body, owner, repo),
 		}
@@ -324,7 +325,7 @@ func validPayload(data []byte, sig string, publicKey *ecdsa.PublicKey) (bool, er
 	return ecdsa.Verify(publicKey, digest[:], parsedSig.R, parsedSig.S), nil
 }
 
-func getFunctionCall(res *copilotChatCompletionsResponse) *chatMessageFunctionCall {
+func getFunctionCall(res *copilot.ChatCompletionsResponse) *copilot.ChatMessageFunctionCall {
 	if len(res.Choices) == 0 {
 		return nil
 	}
