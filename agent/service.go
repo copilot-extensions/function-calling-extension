@@ -18,6 +18,65 @@ import (
 	"github.com/wk8/go-ordered-map/v2"
 )
 
+var tools []copilot.FunctionTool
+
+func init() {
+	listProperties := orderedmap.New[string, *jsonschema.Schema]()
+	listProperties.Set("repository_owner", &jsonschema.Schema{
+		Type:        "string",
+		Description: "The owner of the repository",
+	})
+	listProperties.Set("repository_name", &jsonschema.Schema{
+		Type:        "string",
+		Description: "The type of the repository",
+	})
+
+	createProperties := orderedmap.New[string, *jsonschema.Schema]()
+	createProperties.Set("repository_owner", &jsonschema.Schema{
+		Type:        "string",
+		Description: "The owner of the repository",
+	})
+	createProperties.Set("repository_name", &jsonschema.Schema{
+		Type:        "string",
+		Description: "The name of the repository",
+	})
+	createProperties.Set("issue_title", &jsonschema.Schema{
+		Type:        "string",
+		Description: "The title of the issue being created",
+	})
+	createProperties.Set("issue_body", &jsonschema.Schema{
+		Type:        "string",
+		Description: "The content of the issue being created",
+	})
+
+	tools = []copilot.FunctionTool{
+		{
+			Type: "function",
+			Function: copilot.Function{
+				Name:        "list_issues",
+				Description: "Fetch a list of issues from github.com for a given repository.  Users may specify the repository owner and the repository name separately, or they may specify it in the form {repository_owner}/{repository_name}, or in the form github.com/{repository_owner}/{repository_name}.",
+				Parameters: &jsonschema.Schema{
+					Type:       "object",
+					Properties: listProperties,
+					Required:   []string{"repository_owner", "repository_name"},
+				},
+			},
+		},
+		{
+			Type: "function",
+			Function: copilot.Function{
+				Name:        "create_issue_dialog",
+				Description: "Creates a confirmation dialog in which the user can interact with in order to create an issue on a github.com repository.  Only one dialog should be created for each issue/repository combination.  Users may specify the repository owner and the repository name separately, or they may specify it in the form {repository_owner}/{repository_name}, or in the form github.com/{repository_owner}/{repository_name}.",
+				Parameters: &jsonschema.Schema{
+					Type:       "object",
+					Properties: createProperties,
+					Required:   []string{"repository_owner", "repository_name", "issue_title", "issue_body"},
+				},
+			},
+		},
+	}
+}
+
 // Service provides and endpoint for this agent to perform chat completions
 type Service struct {
 	pubKey *ecdsa.PublicKey
@@ -102,70 +161,15 @@ func generateCompletion(ctx context.Context, integrationID, apiToken string, req
 	// order to feed that information back into the LLM
 	for i := 0; i < 5; i++ {
 
-		// Only give the LLM tools if we're not on the last loop.  On the final
-		// iteration, we want to force a chat completion out of the LLM
-		var tools []copilot.FunctionTool
-		if i < 4 {
-			listProperties := orderedmap.New[string, *jsonschema.Schema]()
-			listProperties.Set("repository_owner", &jsonschema.Schema{
-				Type:        "string",
-				Description: "The owner of the repository",
-			})
-			listProperties.Set("repository_name", &jsonschema.Schema{
-				Type:        "string",
-				Description: "The type of the repository",
-			})
-
-			createProperties := orderedmap.New[string, *jsonschema.Schema]()
-			createProperties.Set("repository_owner", &jsonschema.Schema{
-				Type:        "string",
-				Description: "The owner of the repository",
-			})
-			createProperties.Set("repository_name", &jsonschema.Schema{
-				Type:        "string",
-				Description: "The name of the repository",
-			})
-			createProperties.Set("issue_title", &jsonschema.Schema{
-				Type:        "string",
-				Description: "The title of the issue being created",
-			})
-			createProperties.Set("issue_body", &jsonschema.Schema{
-				Type:        "string",
-				Description: "The content of the issue being created",
-			})
-
-			tools = []copilot.FunctionTool{
-				{
-					Type: "function",
-					Function: copilot.Function{
-						Name:        "list_issues",
-						Description: "Fetch a list of issues from github.com for a given repository.  Users may specify the repository owner and the repository name separately, or they may specify it in the form {repository_owner}/{repository_name}, or in the form github.com/{repository_owner}/{repository_name}.",
-						Parameters: &jsonschema.Schema{
-							Type:       "object",
-							Properties: listProperties,
-							Required:   []string{"repository_owner", "repository_name"},
-						},
-					},
-				},
-				{
-					Type: "function",
-					Function: copilot.Function{
-						Name:        "create_issue_dialog",
-						Description: "Creates a confirmation dialog in which the user can interact with in order to create an issue on a github.com repository.  Only one dialog should be created for each issue/repository combination.  Users may specify the repository owner and the repository name separately, or they may specify it in the form {repository_owner}/{repository_name}, or in the form github.com/{repository_owner}/{repository_name}.",
-						Parameters: &jsonschema.Schema{
-							Type:       "object",
-							Properties: createProperties,
-							Required:   []string{"repository_owner", "repository_name", "issue_title", "issue_body"},
-						},
-					},
-				},
-			}
-		}
-
 		chatReq := &copilot.ChatCompletionsRequest{
 			Model:    copilot.ModelGPT35,
 			Messages: messages,
-			Tools:    tools,
+		}
+
+		// Only give the LLM tools if we're not on the last loop.  On the final
+		// iteration, we want to force a chat completion out of the LLM
+		if i < 4 {
+			chatReq.Tools = tools
 		}
 
 		res, err := copilot.ChatCompletions(ctx, integrationID, apiToken, chatReq)
