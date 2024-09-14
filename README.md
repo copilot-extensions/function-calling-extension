@@ -1,11 +1,8 @@
 # Function Calling Extensions Sample
 
 > [!NOTE]
-> To use Copilot Extensions, you must be enrolled in the limited public beta.
-> 
-> All enrolled users with a GitHub Copilot Individual subscription can use Copilot Extensions.
-> 
-> For enrolled organizations or enterprises with a Copilot Business or Copilot Enterprise subscription, organization owners and enterprise administrators can grant access to Copilot Extensions.
+> Copilot Extensions are in public beta and may be subject to change
+> All users with a GitHub Copilot Individual subscription or higher can use Copilot Extensions
 
 ## Description
 This project is a Go application that demonstrates how to use function calling in a GitHub Copilot Extension.
