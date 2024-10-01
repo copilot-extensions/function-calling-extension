@@ -1,0 +1,54 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+env:
+  GO_VERSION: "1.22.4"
+  IMAGE_NAME: ghcr.io/daniwk/function-calling-extension
+  
+jobs:
+  build_push:
+    env:
+      PACKAGE_NAME: icp-backend
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Ko
+        uses: ko-build/setup-ko@v0.6
+
+      - name: Set BUILD_VERSION for tag push
+        id: set_build_version
+        run: |
+          if [ "${{ github.event_name }}" == "push" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "BUILD_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            echo "BUILD_VERSION=latest" >> $GITHUB_ENV
+          fi
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+
+      - name: Build image
+        if: ${{ ! endswith(github.ref, 'staging') }}
+        run: |
+          echo "Building image: $BUILD_VERSION, github.ref: ${{ github.ref }}, "
+          export GOFLAGS="-ldflags=-X=${{ env.PACKAGE_NAME }}/internal/build.Version=$BUILD_VERSION"
+          KO_DOCKER_REPO=${{ env.IMAGE_NAME }}
+          ko build . --bare -t $BUILD_VERSION
