@@ -1,8 +1,7 @@
 # Function Calling Extensions Sample
 
 > [!NOTE]
-> Copilot Extensions are in public beta and may be subject to change
-> All users with a GitHub Copilot Individual subscription or higher can use Copilot Extensions
+> Copilot Extensions are in public beta and may be subject to change.
 
 ## Description
 This project is a Go application that demonstrates how to use function calling in a GitHub Copilot Extension.
