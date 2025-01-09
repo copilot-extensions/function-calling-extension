@@ -28,7 +28,7 @@ func init() {
 	})
 	listProperties.Set("repository_name", &jsonschema.Schema{
 		Type:        "string",
-		Description: "The type of the repository",
+		Description: "The name of the repository",
 	})
 
 	createProperties := orderedmap.New[string, *jsonschema.Schema]()
