@@ -77,7 +77,7 @@ func init() {
 	}
 }
 
-// Service provides and endpoint for this agent to perform chat completions
+// Service provides endpoint for this agent to perform chat completions
 type Service struct {
 	pubKey *ecdsa.PublicKey
 }
