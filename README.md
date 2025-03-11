@@ -1,8 +1,5 @@
 # Function Calling Extensions Sample
 
-> [!NOTE]
-> Copilot Extensions are in public beta and may be subject to change.
-
 ## Description
 This project is a Go application that demonstrates how to use function calling in an agent-based GitHub Copilot Extension.
 
